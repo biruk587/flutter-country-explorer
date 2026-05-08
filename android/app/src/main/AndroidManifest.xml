@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required to make HTTP network requests (http package) -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="flutter_country_explorer"
         android:name="${applicationName}"
