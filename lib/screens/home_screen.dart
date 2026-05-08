@@ -8,6 +8,9 @@
 //
 // NOTE: No http imports here — all networking is in CountryApiService.
 
+import 'dart:async'; // TimeoutException
+import 'dart:io';   // SocketException
+
 import 'package:flutter/material.dart';
 
 import '../models/country.dart';
@@ -154,21 +157,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Maps exception types to user-friendly messages (assignment Section 4.5).
   String _errorMessage(Object error) {
-    // Import dart:io and dart:async types are matched by name via runtimeType
-    // because they are caught in the service layer and re-thrown.
-    if (error.toString().contains('SocketException') ||
-        error.toString().contains('No internet') ||
-        error.toString().contains('Failed host lookup')) {
+    if (error is SocketException) {
       return 'No internet connection.\nPlease check your network and try again.';
     }
-    if (error.toString().contains('TimeoutException') ||
-        error.toString().contains('timed out')) {
+    if (error is TimeoutException) {
       return 'Request timed out. Please try again.';
     }
     if (error is ApiException) {
       return 'Server error (HTTP ${error.statusCode}):\n${error.message}';
     }
-    if (error.toString().contains('FormatException')) {
+    if (error is FormatException) {
       return 'Unexpected data format received.';
     }
     return 'An unexpected error occurred:\n${error.toString()}';
