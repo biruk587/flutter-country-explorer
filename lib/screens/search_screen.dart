@@ -18,18 +18,61 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final CountryApiService _apiService = CountryApiService();
   final TextEditingController _controller = TextEditingController();
+
+  // Bonus: Debounce timer — delays API call by 400ms
+  Timer? _debounceTimer;
   Future<List<Country>>? _searchFuture;
+  bool _isDebouncing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onSearchChanged);
+  }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    _controller.removeListener(_onSearchChanged);
     _controller.dispose();
     super.dispose();
   }
 
+  // Called every time text changes — debounces for 400ms
+  void _onSearchChanged() {
+    final query = _controller.text.trim();
+
+    // Cancel any previous timer
+    _debounceTimer?.cancel();
+
+    if (query.isEmpty) {
+      setState(() {
+        _searchFuture = null;
+        _isDebouncing = false;
+      });
+      return;
+    }
+
+    // Show debouncing indicator
+    setState(() => _isDebouncing = true);
+
+    // Wait 400ms after user stops typing, then search
+    _debounceTimer = Timer(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      setState(() {
+        _isDebouncing = false;
+        _searchFuture = _apiService.searchByName(query);
+      });
+    });
+  }
+
+  // Manual search (from FAB or keyboard submit)
   void _search() {
     final query = _controller.text.trim();
     if (query.isEmpty) return;
+    _debounceTimer?.cancel();
     setState(() {
+      _isDebouncing = false;
       _searchFuture = _apiService.searchByName(query);
     });
   }
@@ -56,7 +99,6 @@ class _SearchScreenState extends State<SearchScreen> {
                   icon: const Icon(Icons.clear),
                   onPressed: () {
                     _controller.clear();
-                    setState(() => _searchFuture = null);
                   },
                 ),
                 border: const OutlineInputBorder(),
@@ -64,64 +106,7 @@ class _SearchScreenState extends State<SearchScreen> {
               onSubmitted: (_) => _search(),
             ),
           ),
-          Expanded(
-            child: _searchFuture == null
-                ? const Center(
-                    child: Text(
-                      'Type a country name and press Search.',
-                      textAlign: TextAlign.center,
-                    ),
-                  )
-                : FutureBuilder<List<Country>>(
-                    future: _searchFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (snapshot.hasError) {
-                        return _buildErrorWidget(snapshot.error!);
-                      }
-                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return Center(
-                          child: Text(
-                            'No results for "${_controller.text.trim()}".',
-                          ),
-                        );
-                      }
-                      final results = snapshot.data!;
-                      return ListView.builder(
-                        itemCount: results.length,
-                        itemBuilder: (context, index) {
-                          final country = results[index];
-                          return ListTile(
-                            leading: Text(
-                              country.flagEmoji,
-                              style: const TextStyle(fontSize: 32),
-                            ),
-                            title: Text(
-                              country.commonName,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            subtitle: Text(country.region),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => DetailScreen(
-                                    alpha3Code: country.alpha3Code,
-                                    countryName: country.commonName,
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      );
-                    },
-                  ),
-          ),
+          Expanded(child: _buildResults()),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -129,6 +114,70 @@ class _SearchScreenState extends State<SearchScreen> {
         tooltip: 'Search',
         child: const Icon(Icons.search),
       ),
+    );
+  }
+
+  Widget _buildResults() {
+    // No search yet
+    if (_searchFuture == null && !_isDebouncing) {
+      return const Center(
+        child: Text(
+          'Start typing to search countries.',
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+
+    // Debouncing — waiting for user to stop typing
+    if (_isDebouncing) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return FutureBuilder<List<Country>>(
+      future: _searchFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return _buildErrorWidget(snapshot.error!);
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(
+            child: Text('No results for "${_controller.text.trim()}".' ),
+          );
+        }
+        final results = snapshot.data!;
+        return ListView.builder(
+          itemCount: results.length,
+          itemBuilder: (context, index) {
+            final country = results[index];
+            return ListTile(
+              leading: Text(
+                country.flagEmoji,
+                style: const TextStyle(fontSize: 32),
+              ),
+              title: Text(
+                country.commonName,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(country.region),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => DetailScreen(
+                      alpha3Code: country.alpha3Code,
+                      countryName: country.commonName,
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 
