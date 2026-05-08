@@ -1,23 +1,13 @@
-// lib/screens/home_screen.dart
-// Home screen — displays a scrollable list of ALL countries.
-// Uses FutureBuilder<List<Country>> and handles all 4 states:
-//   ConnectionState.waiting → loading spinner
-//   snapshot.hasError      → error message + Retry button
-//   snapshot.data == null  → empty/no data message
-//   snapshot.hasData       → ListView of countries
-//
-// NOTE: No http imports here — all networking is in CountryApiService.
-
-import 'dart:async'; // TimeoutException
-import 'dart:io';   // SocketException
+import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 
 import '../models/country.dart';
-import '../services/country_api_service.dart';
 import '../services/api_exception.dart';
-import 'search_screen.dart';
+import '../services/country_api_service.dart';
 import 'detail_screen.dart';
+import 'search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -27,21 +17,15 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // The single service instance used for all HTTP calls.
   final CountryApiService _apiService = CountryApiService();
-
-  // The Future that drives the FutureBuilder. Stored so we can replace it
-  // on Retry without rebuilding the widget tree unnecessarily.
   late Future<List<Country>> _countriesFuture;
 
   @override
   void initState() {
     super.initState();
-    // Assign the future in initState — never call async functions in build().
     _countriesFuture = _apiService.fetchAllCountries();
   }
 
-  /// Retriggers the network request by replacing the stored Future.
   void _retry() {
     setState(() {
       _countriesFuture = _apiService.fetchAllCountries();
@@ -55,16 +39,13 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('🌍 Country Explorer'),
         centerTitle: true,
         actions: [
-          // Navigate to the Search screen.
           IconButton(
             icon: const Icon(Icons.search),
             tooltip: 'Search countries',
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const SearchScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const SearchScreen()),
               );
             },
           ),
@@ -73,7 +54,6 @@ class _HomeScreenState extends State<HomeScreen> {
       body: FutureBuilder<List<Country>>(
         future: _countriesFuture,
         builder: (context, snapshot) {
-          // ── State 1: Loading ──────────────────────────────────────────────
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: Column(
@@ -87,19 +67,14 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
 
-          // ── State 2: Error ────────────────────────────────────────────────
           if (snapshot.hasError) {
             return _buildErrorWidget(snapshot.error!);
           }
 
-          // ── State 3: No data ──────────────────────────────────────────────
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
-              child: Text('No countries found.'),
-            );
+            return const Center(child: Text('No countries found.'));
           }
 
-          // ── State 4: Data ─────────────────────────────────────────────────
           final countries = snapshot.data!;
           return ListView.builder(
             itemCount: countries.length,
@@ -126,10 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Builds an error widget with a user-friendly message and a Retry button.
-  /// Handles all 5 error types required by the assignment (Section 4.5).
   Widget _buildErrorWidget(Object error) {
-    final String message = _errorMessage(error);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -139,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
             Text(
-              message,
+              _errorMessage(error),
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16),
             ),
@@ -155,7 +127,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Maps exception types to user-friendly messages (assignment Section 4.5).
   String _errorMessage(Object error) {
     if (error is SocketException) {
       return 'No internet connection.\nPlease check your network and try again.';
@@ -173,16 +144,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ── Private list tile widget ──────────────────────────────────────────────────
-
 class _CountryListTile extends StatelessWidget {
   final Country country;
   final VoidCallback onTap;
 
-  const _CountryListTile({
-    required this.country,
-    required this.onTap,
-  });
+  const _CountryListTile({required this.country, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -195,7 +161,7 @@ class _CountryListTile extends StatelessWidget {
         country.commonName,
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
-      subtitle: Text(country.region.isNotEmpty ? country.region : 'Unknown region'),
+      subtitle: Text(country.region.isNotEmpty ? country.region : 'Unknown'),
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
     );

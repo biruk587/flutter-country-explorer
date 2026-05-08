@@ -9,11 +9,9 @@ Addis Ababa University · School of IT & Engineering · Department of Software E
 
 | Field | Details |
 |-------|---------|
-| **Name** | `[YOUR FULL NAME HERE]` |
-| **Student ID** | `[YOUR STUDENT ID HERE]` |
+| **Name** | Biruk Mulugeta |
+| **Student ID** | ATE/7635/15 |
 | **Track** | Track A — Country Explorer App |
-
-> ⚠️ **Fill in your name and student ID above before submitting.**
 
 ---
 

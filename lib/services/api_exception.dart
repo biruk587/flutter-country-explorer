@@ -1,7 +1,3 @@
-// lib/services/api_exception.dart
-// Custom exception thrown by the API service whenever the server returns
-// a non-200 HTTP status code, as required by the assignment rubric.
-
 class ApiException implements Exception {
   final int statusCode;
   final String message;
@@ -12,6 +8,5 @@ class ApiException implements Exception {
   });
 
   @override
-  String toString() =>
-      'ApiException: HTTP $statusCode — $message';
+  String toString() => 'ApiException: HTTP $statusCode — $message';
 }

@@ -1,27 +1,14 @@
-// lib/screens/detail_screen.dart
-// Detail screen — shows full details of a selected country.
-// Fetches data by ISO alpha-3 code via GET /alpha/{code}.
-//
-// Fields displayed: capital, population, currencies, languages,
-//                   area, timezones (all required by Track A spec).
-//
-// Uses FutureBuilder<Country> with all 4 states + mounted check.
-// NOTE: No http imports here — all networking is in CountryApiService.
-
-import 'dart:async'; // TimeoutException
-import 'dart:io';   // SocketException
+import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 
 import '../models/country.dart';
-import '../services/country_api_service.dart';
 import '../services/api_exception.dart';
+import '../services/country_api_service.dart';
 
 class DetailScreen extends StatefulWidget {
-  /// ISO alpha-3 code of the country to load.
   final String alpha3Code;
-
-  /// Display name shown in the AppBar while loading.
   final String countryName;
 
   const DetailScreen({
@@ -41,14 +28,10 @@ class _DetailScreenState extends State<DetailScreen> {
   @override
   void initState() {
     super.initState();
-    // Kick off the network call in initState — never in build().
     _countryFuture = _apiService.fetchByCode(widget.alpha3Code);
   }
 
-  /// Retries the fetch by replacing the stored Future.
   void _retry() {
-    // mounted check — we are still in initState/setState flow so widget is
-    // guaranteed mounted here, but we guard explicitly as best practice.
     if (!mounted) return;
     setState(() {
       _countryFuture = _apiService.fetchByCode(widget.alpha3Code);
@@ -65,7 +48,6 @@ class _DetailScreenState extends State<DetailScreen> {
       body: FutureBuilder<Country>(
         future: _countryFuture,
         builder: (context, snapshot) {
-          // ── State 1: Loading ────────────────────────────────────────────
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: Column(
@@ -78,68 +60,53 @@ class _DetailScreenState extends State<DetailScreen> {
               ),
             );
           }
-
-          // ── State 2: Error ──────────────────────────────────────────────
           if (snapshot.hasError) {
             return _buildErrorWidget(snapshot.error!);
           }
-
-          // ── State 3: No data ────────────────────────────────────────────
           if (!snapshot.hasData) {
-            return const Center(
-              child: Text('No data available for this country.'),
-            );
+            return const Center(child: Text('No data available.'));
           }
-
-          // ── State 4: Data ───────────────────────────────────────────────
-          final country = snapshot.data!;
-          return _buildCountryDetail(country);
+          return _buildCountryDetail(snapshot.data!);
         },
       ),
     );
   }
 
-  /// Renders the full country detail layout.
   Widget _buildCountryDetail(Country country) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Flag + Name header ──────────────────────────────────────────
           Center(
             child: Column(
               children: [
-                Text(
-                  country.flagEmoji,
-                  style: const TextStyle(fontSize: 80),
-                ),
+                Text(country.flagEmoji, style: const TextStyle(fontSize: 80)),
                 const SizedBox(height: 8),
                 Text(
                   country.commonName,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 if (country.officialName != country.commonName) ...[
                   const SizedBox(height: 4),
                   Text(
                     country.officialName,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                 ],
               ],
             ),
           ),
-
           const SizedBox(height: 24),
           const Divider(),
-
-          // ── Detail rows ─────────────────────────────────────────────────
           _DetailRow(
             icon: Icons.location_city,
             label: 'Capital',
@@ -153,9 +120,9 @@ class _DetailScreenState extends State<DetailScreen> {
           _DetailRow(
             icon: Icons.map,
             label: 'Region',
-            value: country.region.isNotEmpty
-                ? '${country.region}${country.subregion.isNotEmpty ? ' — ${country.subregion}' : ''}'
-                : 'N/A',
+            value: country.subregion.isNotEmpty
+                ? '${country.region} — ${country.subregion}'
+                : country.region,
           ),
           _DetailRow(
             icon: Icons.square_foot,
@@ -195,7 +162,6 @@ class _DetailScreenState extends State<DetailScreen> {
     );
   }
 
-  /// Formats a large integer with comma separators.
   String _formatNumber(int number) {
     final str = number.toString();
     final buffer = StringBuffer();
@@ -208,9 +174,7 @@ class _DetailScreenState extends State<DetailScreen> {
     return buffer.toString().split('').reversed.join();
   }
 
-  /// Builds a user-friendly error widget with Retry for all 5 error types.
   Widget _buildErrorWidget(Object error) {
-    final String message = _errorMessage(error);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -220,7 +184,7 @@ class _DetailScreenState extends State<DetailScreen> {
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
             Text(
-              message,
+              _errorMessage(error),
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16),
             ),
@@ -236,7 +200,6 @@ class _DetailScreenState extends State<DetailScreen> {
     );
   }
 
-  /// Maps exception types to user-friendly messages (assignment Section 4.5).
   String _errorMessage(Object error) {
     if (error is SocketException) {
       return 'No internet connection.\nPlease check your network and try again.';
@@ -253,8 +216,6 @@ class _DetailScreenState extends State<DetailScreen> {
     return 'An unexpected error occurred:\n${error.toString()}';
   }
 }
-
-// ── Private reusable detail row ───────────────────────────────────────────────
 
 class _DetailRow extends StatelessWidget {
   final IconData icon;
@@ -290,10 +251,7 @@ class _DetailRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: const TextStyle(fontSize: 15),
-                ),
+                Text(value, style: const TextStyle(fontSize: 15)),
               ],
             ),
           ),

@@ -1,17 +1,11 @@
-// lib/screens/search_screen.dart
-// Search screen — lets the user type a country name and fetches matching
-// results via GET /name/{name}.
-//
-// NOTE: No http imports here — all networking is in CountryApiService.
-
-import 'dart:async'; // TimeoutException
-import 'dart:io';   // SocketException
+import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 
 import '../models/country.dart';
-import '../services/country_api_service.dart';
 import '../services/api_exception.dart';
+import '../services/country_api_service.dart';
 import 'detail_screen.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -24,8 +18,6 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final CountryApiService _apiService = CountryApiService();
   final TextEditingController _controller = TextEditingController();
-
-  // Null means "user hasn't searched yet". A non-null Future drives results.
   Future<List<Country>>? _searchFuture;
 
   @override
@@ -34,11 +26,9 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  /// Kicks off a search when the user submits the text field.
   void _search() {
     final query = _controller.text.trim();
     if (query.isEmpty) return;
-
     setState(() {
       _searchFuture = _apiService.searchByName(query);
     });
@@ -53,7 +43,6 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
       body: Column(
         children: [
-          // ── Search bar ──────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -67,9 +56,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   icon: const Icon(Icons.clear),
                   onPressed: () {
                     _controller.clear();
-                    setState(() {
-                      _searchFuture = null;
-                    });
+                    setState(() => _searchFuture = null);
                   },
                 ),
                 border: const OutlineInputBorder(),
@@ -77,42 +64,30 @@ class _SearchScreenState extends State<SearchScreen> {
               onSubmitted: (_) => _search(),
             ),
           ),
-
-          // ── Results area ────────────────────────────────────────────────
           Expanded(
             child: _searchFuture == null
                 ? const Center(
                     child: Text(
-                      'Type a country name above and press Search.',
+                      'Type a country name and press Search.',
                       textAlign: TextAlign.center,
                     ),
                   )
                 : FutureBuilder<List<Country>>(
                     future: _searchFuture,
                     builder: (context, snapshot) {
-                      // State 1: Loading
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(
-                          child: CircularProgressIndicator(),
-                        );
+                        return const Center(child: CircularProgressIndicator());
                       }
-
-                      // State 2: Error
                       if (snapshot.hasError) {
                         return _buildErrorWidget(snapshot.error!);
                       }
-
-                      // State 3: No data
                       if (!snapshot.hasData || snapshot.data!.isEmpty) {
                         return Center(
                           child: Text(
                             'No results for "${_controller.text.trim()}".',
-                            textAlign: TextAlign.center,
                           ),
                         );
                       }
-
-                      // State 4: Data
                       final results = snapshot.data!;
                       return ListView.builder(
                         itemCount: results.length,
@@ -125,8 +100,8 @@ class _SearchScreenState extends State<SearchScreen> {
                             ),
                             title: Text(
                               country.commonName,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w600),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600),
                             ),
                             subtitle: Text(country.region),
                             trailing: const Icon(Icons.chevron_right),
@@ -149,8 +124,6 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
         ],
       ),
-
-      // Search button in the bottom-right corner.
       floatingActionButton: FloatingActionButton(
         onPressed: _search,
         tooltip: 'Search',
@@ -159,9 +132,7 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  /// Builds a user-friendly error widget for all 5 required error types.
   Widget _buildErrorWidget(Object error) {
-    final String message = _errorMessage(error);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -171,7 +142,7 @@ class _SearchScreenState extends State<SearchScreen> {
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
             Text(
-              message,
+              _errorMessage(error),
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16),
             ),
@@ -187,7 +158,6 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  /// Maps exception types to user-friendly messages (assignment Section 4.5).
   String _errorMessage(Object error) {
     if (error is SocketException) {
       return 'No internet connection.\nPlease check your network and try again.';
