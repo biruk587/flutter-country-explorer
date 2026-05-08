@@ -139,6 +139,11 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+            onPressed: _loadCountries,
+          ),
         ],
       ),
       body: _buildBody(),
